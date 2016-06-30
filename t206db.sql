@@ -61,7 +61,6 @@ SET default_with_oids = false;
 -- All 524 card fronts and their metadata
 CREATE TABLE cards (
     id_card integer PRIMARY KEY,
-    id_psa_card integer REFERENCES psa_card,
     card text NOT NULL,
     first_name text NOT NULL,
     last_name text NOT NULL,
@@ -71,6 +70,17 @@ CREATE TABLE cards (
 );
 
 ALTER TABLE cards OWNER TO jdesilvio;
+
+-- PSA CARD
+-- Card names as they appear in the PSA card registry
+-- PSA includes 4 cards with "missing red ink" as individual cards
+CREATE TABLE psa_card (
+    id_psa_card integer PRIMARY KEY,
+    id_card integer REFERENCES cards,
+    psa_card text NOT NULL
+);
+
+ALTER TABLE psa_card OWNER TO jdesilvio;
 
 -- BACKS
 -- All back types and their metadata
@@ -106,16 +116,14 @@ CREATE TABLE psa (
 
 ALTER TABLE psa OWNER TO jdesilvio;
 
--- PSA CARD
--- Card names as they appear in the PSA card registry
--- PSA includes 4 cards with "missing red ink" as individual cards
-CREATE TABLE psa_card (
-    id_psa_card integer PRIMARY KEY,
-    id_card integer REFERENCES cards,
-    psa_card text NOT NULL
+-- GRADES
+-- All card grade levels for PSA
+CREATE TABLE grades (
+    id_grade integer PRIMARY KEY,
+    psa_grade_name text NOT NULL
 );
 
-ALTER TABLE psa_card OWNER TO jdesilvio;
+ALTER TABLE grades OWNER TO jdesilvio;
 
 -- PSA POP
 -- Population report table for the PSA card grading registry
@@ -129,21 +137,12 @@ CREATE TABLE psa_pop (
 
 ALTER TABLE psa_pop OWNER TO jdesilvio;
 
--- GRADES
--- All card grade levels for PSA
-CREATE TABLE grades (
-    id_grade integer PRIMARY KEY,
-    psa_grade_name text NOT NULL
-);
-
-ALTER TABLE grades OWNER TO jdesilvio;
-
 -- SMR
 -- Price guide information from SMR
 CREATE TABLE smr (
     id_smr integer PRIMARY KEY,
     id_card integer REFERENCES cards,
-    id_grade numeric REFERENCES grades,
+    id_grade integer REFERENCES grades,
     value numeric
 );
 
@@ -384,7 +383,8 @@ CREATE FUNCTION summary_backs(text)
     AS $_$
     BEGIN
       RETURN QUERY
-        SELECT temp1.back, temp1.amt, temp2.percent FROM agg_backs($1) AS temp1 
+        SELECT temp1.back, temp1.amt, temp2.percent 
+        FROM agg_backs($1) AS temp1 
         LEFT JOIN percent_backs($1) AS temp2 ON temp1.back = temp2.back;
     END;
  $_$;
@@ -399,7 +399,8 @@ CREATE FUNCTION summary_grades(text)
     AS $_$
     BEGIN
       RETURN QUERY
-        SELECT temp1.grade, temp1.amt, temp2.percent FROM agg_grades($1) AS temp1 
+        SELECT temp1.grade, temp1.amt, temp2.percent 
+        FROM agg_grades($1) AS temp1 
         LEFT JOIN percent_grades($1) AS temp2 ON temp1.grade = temp2.grade;
     END;
  $_$;
